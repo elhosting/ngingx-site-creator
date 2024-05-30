@@ -15,13 +15,6 @@ root_path="/var/www/$folder"
 # Crear la carpeta si no existe
 mkdir -p "$root_path"
 
-# Crear la carpeta de caché si no existe
-cache_path="/var/cache/nginx"
-if [ ! -d "$cache_path" ]; then
-    mkdir -p "$cache_path"
-    chown www-data:www-data "$cache_path"
-    chmod 755 "$cache_path"
-fi
 
 # Definir el archivo de configuración de Nginx
 config_file="/etc/nginx/sites-available/$first_server_name"
@@ -81,11 +74,6 @@ EOL
 
 # Crear un enlace simbólico en sites-enabled
 ln -s "$config_file" "/etc/nginx/sites-enabled/"
-
-# Añadir la directiva de fastcgi_cache_path en nginx.conf si no existe
-if ! grep -q "fastcgi_cache_path /var/cache/nginx" /etc/nginx/nginx.conf; then
-    sed -i '/http {/a \    fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=WORDPRESS:100m inactive=60m;\n    fastcgi_cache_key "$scheme$request_method$host$request_uri";' /etc/nginx/nginx.conf
-fi
 
 # Probar la configuración de Nginx
 if nginx -t; then
