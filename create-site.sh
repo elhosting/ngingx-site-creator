@@ -33,7 +33,14 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
+
+        # Directivas de caché FastCGI específicas del dominio
+        fastcgi_cache_bypass \$skip_cache;
+        fastcgi_no_cache \$skip_cache;
+
+        fastcgi_cache WORDPRESS;
+        fastcgi_cache_valid 60m;
     }
 
     location ~ /\.ht {
@@ -57,35 +64,29 @@ server {
         set \$skip_cache 1;
     }
 
-    location ~ \.php$ {
-        fastcgi_cache_bypass \$skip_cache;
-        fastcgi_no_cache \$skip_cache;
-
-        fastcgi_cache WORDPRESS;
-        fastcgi_cache_valid 60m;
-
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
-    }
-
     location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
         expires max;
         log_not_found off;
     }
-
-    # Ruta para almacenar la caché
-    fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=WORDPRESS:100m inactive=60m;
-    fastcgi_cache_key "\$scheme\$request_method\$host\$request_uri";
 }
 EOL
 
 # Crear un enlace simbólico en sites-enabled
 ln -s "$config_file" "/etc/nginx/sites-enabled/"
 
+# Añadir la directiva de fastcgi_cache_path en nginx.conf si no existe
+if ! grep -q "fastcgi_cache_path /var/cache/nginx" /etc/nginx/nginx.conf; then
+    sed -i '/http {/a \    fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=WORDPRESS:100m inactive=60m;\n    fastcgi_cache_key "$scheme$request_method$host$request_uri";' /etc/nginx/nginx.conf
+fi
+
 # Probar la configuración de Nginx
-nginx -t
-
-# Reiniciar Nginx para aplicar los cambios
-systemctl reload nginx
-
-echo "La configuración para $server_name ha sido creada y Nginx ha sido recargado."
+if nginx -t; then
+    # Reiniciar Nginx para aplicar los cambios
+    if systemctl reload nginx; then
+        echo "La configuración para $server_name ha sido creada y Nginx ha sido recargado exitosamente."
+    else
+        echo "La configuración para $server_name ha sido creada, pero la recarga de Nginx ha fallado."
+    fi
+else
+    echo "Error en la configuración de Nginx. Por favor, revise los archivos de configuración."
+fi
