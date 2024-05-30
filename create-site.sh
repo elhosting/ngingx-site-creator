@@ -33,7 +33,7 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
     }
 
     location ~ /\.ht {
