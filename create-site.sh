@@ -15,6 +15,14 @@ root_path="/var/www/$folder"
 # Crear la carpeta si no existe
 mkdir -p "$root_path"
 
+# Crear la carpeta de caché si no existe
+cache_path="/var/cache/nginx"
+if [ ! -d "$cache_path" ]; then
+    mkdir -p "$cache_path"
+    chown www-data:www-data "$cache_path"
+    chmod 755 "$cache_path"
+fi
+
 # Definir el archivo de configuración de Nginx
 config_file="/etc/nginx/sites-available/$first_server_name.conf"
 
@@ -33,7 +41,7 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
 
         # Directivas de caché FastCGI específicas del dominio
         fastcgi_cache_bypass \$skip_cache;
