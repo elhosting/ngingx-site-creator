@@ -24,7 +24,7 @@ if [ ! -d "$cache_path" ]; then
 fi
 
 # Definir el archivo de configuración de Nginx
-config_file="/etc/nginx/sites-available/$first_server_name.conf"
+config_file="/etc/nginx/sites-available/$first_server_name"
 
 # Crear el archivo de configuración con el contenido necesario
 cat <<EOL > "$config_file"
