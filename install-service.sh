@@ -13,6 +13,9 @@ sudo apt install php-fpm php-mysql php-xml php-gd php-curl php-mbstring php-zip 
 # Instalar Certbot para la gestión de certificados SSL de Let's Encrypt
 sudo apt install certbot python3-certbot-nginx -y
 
+# Instalar NFS kernel server para compartir archivos en la red interna
+sudo apt install nfs-kernel-server -y
+
 # Crear la carpeta de caché si no existe
 cache_path="/var/cache/nginx"
 if [ ! -d "$cache_path" ]; then
