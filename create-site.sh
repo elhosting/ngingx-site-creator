@@ -15,9 +15,16 @@ root_path="/var/www/$folder"
 # Crear la carpeta si no existe
 mkdir -p "$root_path"
 
+# Crear la carpeta de caché si no existe
+cache_path="/var/cache/nginx"
+if [ ! -d "$cache_path" ]; then
+    mkdir -p "$cache_path"
+    chown www-data:www-data "$cache_path"
+    chmod 755 "$cache_path"
+fi
 
 # Definir el archivo de configuración de Nginx
-config_file="/etc/nginx/sites-available/$first_server_name"
+config_file="/etc/nginx/sites-available/$first_server_name.conf"
 
 # Crear el archivo de configuración con el contenido necesario
 cat <<EOL > "$config_file"
@@ -34,7 +41,7 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock; # Ajusta esta línea según la versión de PHP que estés usando
 
         # Directivas de caché FastCGI específicas del dominio
         fastcgi_cache_bypass \$skip_cache;
@@ -75,11 +82,37 @@ EOL
 # Crear un enlace simbólico en sites-enabled
 ln -s "$config_file" "/etc/nginx/sites-enabled/"
 
+# Añadir la directiva de fastcgi_cache_path en nginx.conf si no existe
+if ! grep -q "fastcgi_cache_path /var/cache/nginx" /etc/nginx/nginx.conf; then
+    sed -i '/http {/a \    fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=WORDPRESS:100m inactive=60m;\n    fastcgi_cache_key "$scheme$request_method$host$request_uri";' /etc/nginx/nginx.conf
+fi
+
 # Probar la configuración de Nginx
 if nginx -t; then
     # Reiniciar Nginx para aplicar los cambios
     if systemctl reload nginx; then
         echo "La configuración para $server_name ha sido creada y Nginx ha sido recargado exitosamente."
+
+        # Preguntar si se desea compartir la carpeta mediante NFS
+        read -p "¿Desea compartir la carpeta $root_path mediante NFS? (s/n): " share_nfs
+
+        if [[ "$share_nfs" == "s" || "$share_nfs" == "S" ]]; then
+            nfs_export="$root_path *(rw,sync,no_root_squash,no_subtree_check)"
+            
+            # Añadir la carpeta al archivo de exports si no existe
+            if ! grep -q "$root_path" /etc/exports; then
+                echo "$nfs_export" >> /etc/exports
+                
+                # Recargar las exportaciones NFS
+                exportfs -ra
+                
+                echo "La carpeta $root_path ha sido compartida mediante NFS."
+            else
+                echo "La carpeta $root_path ya está compartida mediante NFS."
+            fi
+        else
+            echo "No se ha compartido la carpeta mediante NFS."
+        fi
     else
         echo "La configuración para $server_name ha sido creada, pero la recarga de Nginx ha fallado."
     fi
